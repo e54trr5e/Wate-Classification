@@ -14,3 +14,14 @@ A machine learning project that classifies waste into 6 distinct categories: Car
 3. Run `python 02_extract_features.py`
 4. Run `python 03_train_ml.py`
 5. Run `python 04_predict_ml.py ./path/to/test_image.jpg`
+
+   ## Team Members
+
+- [Mehakdeep Kaur](https://github.com/Mehak-009deep) - Coder, model tester, PPT maker, Report handler
+- [Krrish](https://github.com/e54trr5e) - Coder,model trainer
+- ## Team Members
+
+| Photo | Name | Role |
+|---|---|---|
+| <img src="https://github.com/Mehak-009deep.png" width="60"> | [Mehakdeep Kaur](https://github.com/Mehak-009deep) | Coder, PPT maker, Report handler |
+| <img src="https://github.com/e54trr5e.png" width="60"> | [Krrish](https://github.com/e54trr5e) | Coder |
