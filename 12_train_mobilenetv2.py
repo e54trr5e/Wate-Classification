@@ -28,18 +28,23 @@ def main():
     x=tf.keras.layers.Dropout(.30)(x); outputs=tf.keras.layers.Dense(6,activation="softmax")(x)
     model=tf.keras.Model(inputs,outputs)
     model.compile(optimizer=tf.keras.optimizers.Adam(1e-3),loss="sparse_categorical_crossentropy",metrics=["accuracy"])
+    counts=[sum(1 for p in (DATA/"train"/name).rglob("*") if p.is_file()) for name in CLASSES]
+    if any(count==0 for count in counts): raise ValueError("Every class must have training images.")
+    total=sum(counts)
+    class_weights={i: total/(len(CLASSES)*count) for i,count in enumerate(counts)}
+    print("Training class weights:",class_weights)
     callbacks=[tf.keras.callbacks.EarlyStopping(monitor="val_loss",patience=5,restore_best_weights=True),
       tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss",factor=.5,patience=2,min_lr=1e-6),
       tf.keras.callbacks.ModelCheckpoint(MODELS/"best_mobilenetv2.keras",monitor="val_loss",save_best_only=True)]
     print("Stage 1: train classification head with frozen ImageNet backbone.")
-    h1=model.fit(train,validation_data=val,epochs=12,callbacks=callbacks)
+    h1=model.fit(train,validation_data=val,epochs=12,callbacks=callbacks,class_weight=class_weights)
     backbone.trainable=True
     for layer in backbone.layers[:-30]: layer.trainable=False
     for layer in backbone.layers:
         if isinstance(layer,tf.keras.layers.BatchNormalization): layer.trainable=False
     model.compile(optimizer=tf.keras.optimizers.Adam(1e-5),loss="sparse_categorical_crossentropy",metrics=["accuracy"])
     print("Stage 2: fine-tune upper 30 backbone layers with low learning rate.")
-    h2=model.fit(train,validation_data=val,epochs=15,callbacks=callbacks)
+    h2=model.fit(train,validation_data=val,epochs=15,callbacks=callbacks,class_weight=class_weights)
     best=tf.keras.models.load_model(MODELS/"best_mobilenetv2.keras")
     y=np.concatenate([labels.numpy() for _,labels in test]); probs=best.predict(test,verbose=1); pred=probs.argmax(1)
     cm=confusion_matrix(y,pred,labels=list(range(6)))
