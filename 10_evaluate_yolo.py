@@ -14,7 +14,7 @@ from ultralytics import YOLO
 
 BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = (
-    BASE_DIR / "runs" / "classify" / "runs" / "yolo_classification"
+    BASE_DIR / "runs" / "yolo_classification"
     / "waste_yolov8n_cls" / "weights" / "best.pt"
 )
 DATASET_DIR = BASE_DIR / "yolo_classification"
