@@ -1,35 +1,25 @@
 
-# =========================
-# Python Cache
-# =========================
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.pyo
 
-# =========================
-# Virtual Environments
-# =========================
+# Virtual environments
 venv/
 tf_env/
 .env/
 .venv/
 ENV/
 
-# =========================
 # Jupyter
-# =========================
 .ipynb_checkpoints/
 
-# =========================
-# Datasets
-# =========================
+# Local datasets and generated common split
 dataset/
 datasets/
+shared_dataset/
 
-# =========================
-# Model Files
-# =========================
+# Model artifacts
 *.pt
 *.pth
 *.h5
@@ -38,27 +28,17 @@ datasets/
 *.pkl
 *.joblib
 
-# =========================
-# Training Outputs
-# =========================
+# Generated outputs
 runs/
 results/
 models/
 
-# =========================
-# IDE
-# =========================
+# IDE / OS
 .vscode/
 .idea/
-
-# =========================
-# OS Files
-# =========================
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# =========================
 # Logs
-# =========================
 *.log

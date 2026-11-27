@@ -1,9 +1,10 @@
-torch
-torchvision
-opencv-python
-scikit-learn
+numpy
+pandas
 matplotlib
 seaborn
-pandas
-numpy
-pillow
+opencv-python
+Pillow
+scikit-learn
+tensorflow
+ultralytics
+streamlit

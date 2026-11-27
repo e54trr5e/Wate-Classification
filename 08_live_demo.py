@@ -14,8 +14,6 @@ BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = (
     BASE_DIR
     / "runs"
-    / "classify"
-    / "runs"
     / "yolo_classification"
     / "waste_yolov8n_cls"
     / "weights"
@@ -86,7 +84,7 @@ try:
         prev_time = curr_time
 
         # --------------------------------------------------
-        # DYNAMIC OBJECT BOUNDING BOX (HUE + CONTROURS)
+        # DYNAMIC ROI LOCALIZATION (COLOR MASK + CONTOURS)
         # --------------------------------------------------
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         
@@ -115,7 +113,6 @@ try:
             ymax = min(h, ry + rh + pad)
 
             roi = frame[ymin:ymax, xmin:xmax]
-            is_blue_plastic = True
         else:
             # Fallback center region box
             box_w, box_h = int(w * 0.35), int(h * 0.55)
@@ -124,7 +121,6 @@ try:
             xmax = xmin + box_w
             ymax = ymin + box_h
             roi = frame[ymin:ymax, xmin:xmax]
-            is_blue_plastic = False
 
         # Run model inference on the isolated crop
         results = model.predict(source=roi, imgsz=224, verbose=False)
@@ -134,11 +130,6 @@ try:
             class_id = result.probs.top1
             confidence = float(result.probs.top1conf) * 100
             waste_type = model.names[class_id].lower()
-
-            # Fix background wall bias for blue plastic bottle
-            if is_blue_plastic and waste_type != "plastic":
-                waste_type = "plastic"
-                confidence = max(confidence, 88.5)
 
             recommended_bin = bin_mapping.get(waste_type, "General Waste Bin")
         else:

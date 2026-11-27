@@ -1,163 +1,84 @@
+"""Plot training curves from the current Ultralytics results.csv.
+
+This script intentionally does not create a cross-model accuracy chart.
+A fair comparison requires every model to use the same fixed test images
+and evaluation protocol. See final_model_comparison.py and the README.
+"""
 
 import csv
-import matplotlib.pyplot as plt
 from pathlib import Path
 
-# --------------------------------------------------
-# 1. PROJECT PATHS
-# --------------------------------------------------
+import matplotlib.pyplot as plt
 
 BASE_DIR = Path(__file__).resolve().parent
 RESULTS_DIR = BASE_DIR / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
-CSV_PATH = (
-    BASE_DIR
-    / "runs"
-    / "classify"
-    / "runs"
-    / "yolo_classification"
-    / "waste_yolov8n_cls"
-    / "results.csv"
-)
+# Ultralytics may place the run under either path depending on version/config.
+CANDIDATE_CSV_PATHS = [
+    BASE_DIR / "runs" / "classify" / "runs" / "yolo_classification"
+    / "waste_yolov8n_cls" / "results.csv",
+    BASE_DIR / "runs" / "yolo_classification"
+    / "waste_yolov8n_cls" / "results.csv",
+]
 
-print("\n========== WASTE CLASSIFICATION GRAPHS ==========\n")
+CSV_PATH = next((path for path in CANDIDATE_CSV_PATHS if path.exists()), None)
 
-# --------------------------------------------------
-# 2. READ YOLO CSV WITHOUT PANDAS
-# --------------------------------------------------
 
-if CSV_PATH.exists():
+def main():
+    print("\n========== YOLO TRAINING CURVES ==========\n")
 
-    with open(CSV_PATH, "r", newline="") as file:
+    if CSV_PATH is None:
+        print("YOLO results.csv not found. Train the YOLO classification model first.")
+        return
+
+    with CSV_PATH.open("r", newline="", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         rows = list(reader)
+        columns = reader.fieldnames or []
 
-    if rows:
+    if not rows:
+        print("The YOLO results.csv file is empty.")
+        return
 
-        columns = reader.fieldnames
-        print("Available metrics:", columns)
+    loss_columns = [column for column in columns if "loss" in column.lower()]
+    accuracy_columns = [
+        column for column in columns
+        if "top1" in column.lower() or "top5" in column.lower()
+    ]
 
-        # Find loss and accuracy columns
-        loss_columns = [
-            c for c in columns
-            if "loss" in c.lower()
-        ]
+    for selected_columns, title, ylabel, output_name in [
+        (loss_columns, "YOLOv8 Training and Validation Loss", "Loss", "yolo_training_loss.png"),
+        (accuracy_columns, "YOLOv8 Classification Training Metrics", "Metric", "yolo_training_metrics.png"),
+    ]:
+        if not selected_columns:
+            print(f"No matching columns found for {title}.")
+            continue
 
-        accuracy_columns = [
-            c for c in columns
-            if "accuracy" in c.lower()
-        ]
+        plt.figure(figsize=(9, 5))
+        for column in selected_columns:
+            values = []
+            for row in rows:
+                try:
+                    values.append(float(row[column]))
+                except (TypeError, ValueError):
+                    values.append(float("nan"))
+            plt.plot(range(1, len(values) + 1), values, label=column)
 
-        # Plot training and validation loss
-        if loss_columns:
+        plt.title(title)
+        plt.xlabel("Epoch")
+        plt.ylabel(ylabel)
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
 
-            plt.figure(figsize=(9, 5))
+        output_path = RESULTS_DIR / output_name
+        plt.savefig(output_path, dpi=300)
+        plt.close()
+        print("Saved:", output_path)
 
-            for column in loss_columns:
-                values = [
-                    float(row[column])
-                    for row in rows
-                ]
+    print("\nNo cross-model accuracy chart was generated. Use a common test split first.")
 
-                plt.plot(
-                    range(1, len(values) + 1),
-                    values,
-                    label=column
-                )
 
-            plt.title("YOLOv8 Training and Validation Loss")
-            plt.xlabel("Epoch")
-            plt.ylabel("Loss")
-            plt.legend()
-            plt.grid(True)
-            plt.tight_layout()
-
-            path = RESULTS_DIR / "yolo_training_loss.png"
-            plt.savefig(path, dpi=300)
-            plt.show()
-
-            print("Saved:", path)
-
-        # Plot accuracy
-        if accuracy_columns:
-
-            plt.figure(figsize=(9, 5))
-
-            for column in accuracy_columns:
-                values = [
-                    float(row[column])
-                    for row in rows
-                ]
-
-                plt.plot(
-                    range(1, len(values) + 1),
-                    values,
-                    label=column
-                )
-
-            plt.title("YOLOv8 Classification Accuracy")
-            plt.xlabel("Epoch")
-            plt.ylabel("Accuracy")
-            plt.legend()
-            plt.grid(True)
-            plt.tight_layout()
-
-            path = RESULTS_DIR / "yolo_training_accuracy.png"
-            plt.savefig(path, dpi=300)
-            plt.show()
-
-            print("Saved:", path)
-
-    else:
-        print("The YOLO CSV file is empty.")
-
-else:
-    print("YOLO results.csv not found.")
-    print("Skipping training curves.")
-
-# --------------------------------------------------
-# 3. MODEL ACCURACY COMPARISON
-# --------------------------------------------------
-
-models = [
-    "SVM",
-    "YOLOv8 Classification"
-]
-
-accuracies = [
-    80.24,
-    91.15
-]
-
-plt.figure(figsize=(9, 5))
-
-bars = plt.bar(models, accuracies)
-
-plt.title("Waste Classification Model Accuracy")
-plt.xlabel("Models")
-plt.ylabel("Test Accuracy (%)")
-plt.ylim(0, 100)
-
-for bar, accuracy in zip(bars, accuracies):
-
-    plt.text(
-        bar.get_x() + bar.get_width() / 2,
-        bar.get_height() + 1,
-        f"{accuracy:.2f}%",
-        ha="center"
-    )
-
-plt.grid(axis="y", linestyle="--", alpha=0.5)
-plt.tight_layout()
-
-comparison_path = (
-    RESULTS_DIR / "model_accuracy_comparison.png"
-)
-
-plt.savefig(comparison_path, dpi=300)
-plt.show()
-
-print("\nSaved:", comparison_path)
-
-print("\n========== GRAPH GENERATION COMPLETED ==========")
+if __name__ == "__main__":
+    main()
