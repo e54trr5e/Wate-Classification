@@ -35,17 +35,26 @@ def main():
     print("Training class weights:",class_weights)
     callbacks=[tf.keras.callbacks.EarlyStopping(monitor="val_loss",patience=5,restore_best_weights=True),
       tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss",factor=.5,patience=2,min_lr=1e-6),
-      tf.keras.callbacks.ModelCheckpoint(MODELS/"best_mobilenetv2.keras",monitor="val_loss",save_best_only=True)]
+      tf.keras.callbacks.ModelCheckpoint(MODELS/"mobilenetv2_head_best.keras",monitor="val_loss",save_best_only=True)]
     print("Stage 1: train classification head with frozen ImageNet backbone.")
     h1=model.fit(train,validation_data=val,epochs=12,callbacks=callbacks,class_weight=class_weights)
+    model=tf.keras.models.load_model(MODELS/"mobilenetv2_head_best.keras")
+    backbone=next(layer for layer in model.layers if isinstance(layer,tf.keras.Model) and "mobilenetv2" in layer.name.lower())
     backbone.trainable=True
     for layer in backbone.layers[:-30]: layer.trainable=False
     for layer in backbone.layers:
         if isinstance(layer,tf.keras.layers.BatchNormalization): layer.trainable=False
+    callbacks[2]=tf.keras.callbacks.ModelCheckpoint(MODELS/"mobilenetv2_finetuned_best.keras",monitor="val_loss",save_best_only=True)
     model.compile(optimizer=tf.keras.optimizers.Adam(1e-5),loss="sparse_categorical_crossentropy",metrics=["accuracy"])
     print("Stage 2: fine-tune upper 30 backbone layers with low learning rate.")
     h2=model.fit(train,validation_data=val,epochs=15,callbacks=callbacks,class_weight=class_weights)
-    best=tf.keras.models.load_model(MODELS/"best_mobilenetv2.keras")
+    head_best=tf.keras.models.load_model(MODELS/"mobilenetv2_head_best.keras")
+    fine_best=tf.keras.models.load_model(MODELS/"mobilenetv2_finetuned_best.keras")
+    head_val=float(head_best.evaluate(val,verbose=0)[0])
+    fine_val=float(fine_best.evaluate(val,verbose=0)[0])
+    best=head_best if head_val<=fine_val else fine_best
+    print("Validation loss — frozen head:",head_val,"fine-tuned:",fine_val)
+    best.save(MODELS/"mobilenetv2_waste_model.keras")
     y=np.concatenate([labels.numpy() for _,labels in test]); probs=best.predict(test,verbose=1); pred=probs.argmax(1)
     cm=confusion_matrix(y,pred,labels=list(range(6)))
     report={"model":"MobileNetV2 Transfer Learning","evaluation":"test",
@@ -58,7 +67,6 @@ def main():
       "weighted_f1":float(f1_score(y,pred,average="weighted",zero_division=0)),
       "classification_report":classification_report(y,pred,labels=list(range(6)),target_names=CLASSES,output_dict=True,zero_division=0),
       "confusion_matrix":cm.tolist()}
-    best.save(MODELS/"mobilenetv2_waste_model.keras")
     (RESULTS/"mobilenetv2_results.json").write_text(json.dumps(report,indent=2),encoding="utf-8")
     ConfusionMatrixDisplay(cm,display_labels=CLASSES).plot(xticks_rotation=35)
     plt.tight_layout(); plt.savefig(RESULTS/"mobilenetv2_confusion_matrix.png",dpi=220); plt.close()
