@@ -19,7 +19,7 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 
 TRAIN_RATIO = 0.70
 VAL_RATIO = 0.15
-random.seed(42)
+RANDOM_SEED = 42
 
 
 def main():
@@ -27,6 +27,8 @@ def main():
         print("YOLO dataset folder already exists.")
         print("Stopping to avoid copying duplicate images.")
         return
+
+    rng = random.Random(RANDOM_SEED)
 
     for class_name in CLASSES:
         source = SOURCE_DIR / class_name
@@ -44,7 +46,8 @@ def main():
                 f"Not enough images in {class_name}: {len(images)}"
             )
 
-        random.shuffle(images)
+        images = sorted(images, key=lambda path: path.name.lower())
+        rng.shuffle(images)
 
         train_end = int(len(images) * TRAIN_RATIO)
         val_end = train_end + int(len(images) * VAL_RATIO)
