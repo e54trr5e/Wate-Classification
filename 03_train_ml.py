@@ -208,6 +208,13 @@ def evaluate_model(name, model, X_test, y_test):
         zero_division=0
     )
 
+    macro_f1 = f1_score(
+        y_test,
+        predictions,
+        average="macro",
+        zero_division=0
+    )
+
     print("\n" + "=" * 60)
     print("MODEL:", name)
     print("=" * 60)
@@ -215,7 +222,8 @@ def evaluate_model(name, model, X_test, y_test):
     print(f"Accuracy : {accuracy * 100:.2f}%")
     print(f"Precision: {precision * 100:.2f}%")
     print(f"Recall   : {recall * 100:.2f}%")
-    print(f"F1 Score : {f1 * 100:.2f}%")
+    print(f"Weighted F1: {f1 * 100:.2f}%")
+    print(f"Macro F1   : {macro_f1 * 100:.2f}%")
 
     print("\nClassification Report:")
 
@@ -234,6 +242,7 @@ def evaluate_model(name, model, X_test, y_test):
         "precision": precision,
         "recall": recall,
         "f1_score": f1,
+        "macro_f1": macro_f1,
         "predictions": predictions
     }
 
@@ -324,7 +333,8 @@ def train_all_models():
 
     results = []
 
-    best_accuracy = -1
+    best_macro_f1 = -1
+    best_accuracy = None
     best_model = None
     best_model_name = None
 
@@ -376,11 +386,13 @@ def train_all_models():
             "accuracy": metrics["accuracy"],
             "precision": metrics["precision"],
             "recall": metrics["recall"],
-            "f1_score": metrics["f1_score"]
+            "f1_score": metrics["f1_score"],
+            "macro_f1": metrics["macro_f1"]
         })
 
-        if metrics["accuracy"] > best_accuracy:
+        if metrics["macro_f1"] > best_macro_f1:
 
+            best_macro_f1 = metrics["macro_f1"]
             best_accuracy = metrics["accuracy"]
             best_model = model
             best_model_name = model_name
@@ -402,6 +414,7 @@ def train_all_models():
             "Edge Density"
         ],
         "test_accuracy": float(best_accuracy),
+        "test_macro_f1": float(best_macro_f1),
         "model_name": best_model_name,
         "random_state": RANDOM_STATE
     }
@@ -434,7 +447,7 @@ def train_all_models():
 
     for result in sorted(
         results,
-        key=lambda x: x["accuracy"],
+        key=lambda x: x["macro_f1"],
         reverse=True
     ):
 
@@ -449,7 +462,8 @@ def train_all_models():
     print("-" * 75)
 
     print("\nBEST MODEL:", best_model_name)
-    print("BEST ACCURACY:", round(best_accuracy * 100, 2), "%")
+    print("BEST MACRO F1:", round(best_macro_f1 * 100, 2), "%")
+    print("BEST MODEL ACCURACY:", round(best_accuracy * 100, 2), "%")
     print("SAVED TO:", best_path)
 
     # ======================================
