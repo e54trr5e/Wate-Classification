@@ -11,6 +11,7 @@ from sklearn.metrics import (accuracy_score, classification_report, confusion_ma
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from sklearn.svm import SVC
 
 BASE=Path(__file__).resolve().parent
@@ -50,9 +51,9 @@ def main():
     if not all(mask.any() for mask in (tr,va,te)): raise ValueError("Shared split is incomplete.")
     models={
       "Random Forest":RandomForestClassifier(n_estimators=400,class_weight="balanced_subsample",random_state=SEED,n_jobs=-1),
-      "KNN":Pipeline([("scale",StandardScaler()),("model",KNeighborsClassifier(n_neighbors=5,weights="distance"))]),
+      "KNN":Pipeline([("scale",StandardScaler()),("pca",PCA(n_components=0.95,svd_solver="full")),("model",KNeighborsClassifier(n_neighbors=5,weights="distance"))]),
       "Logistic Regression":Pipeline([("scale",StandardScaler()),("model",LogisticRegression(max_iter=2000,class_weight="balanced",random_state=SEED))]),
-      "SVM":Pipeline([("scale",StandardScaler()),("model",SVC(kernel="rbf",probability=True,class_weight="balanced",random_state=SEED))])}
+      "SVM":Pipeline([("scale",StandardScaler()),("pca",PCA(n_components=0.95,svd_solver="full")),("model",SVC(kernel="rbf",probability=True,class_weight="balanced",random_state=SEED))])}
     MODELS.mkdir(exist_ok=True); RESULTS.mkdir(exist_ok=True)
     results={}; val_scores={}
     for name,model in models.items():
