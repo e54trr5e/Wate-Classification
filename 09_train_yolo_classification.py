@@ -54,7 +54,7 @@ def main():
 
     # Load best trained model
     best_model_path = (
-    "./runs/classify/runs/yolo_classification/"
+    "./runs/yolo_classification/"
     "waste_yolov8n_cls/weights/best.pt"
 )
 
