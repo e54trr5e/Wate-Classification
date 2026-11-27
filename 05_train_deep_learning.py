@@ -29,10 +29,15 @@ def main():
     MODELS.mkdir(exist_ok=True); RESULTS.mkdir(exist_ok=True)
     train,val,test=(load_split("train",True),load_split("val",False),load_split("test",False))
     model=build_model()
+    counts=[sum(1 for p in (DATA/"train"/name).rglob("*") if p.is_file()) for name in CLASSES]
+    if any(count==0 for count in counts): raise ValueError("Every class must have training images.")
+    total=sum(counts)
+    class_weights={i: total/(len(CLASSES)*count) for i,count in enumerate(counts)}
+    print("Training class weights:",class_weights)
     callbacks=[tf.keras.callbacks.EarlyStopping(monitor="val_loss",patience=6,restore_best_weights=True),
       tf.keras.callbacks.ReduceLROnPlateau(monitor="val_loss",factor=.5,patience=3,min_lr=1e-6),
       tf.keras.callbacks.ModelCheckpoint(MODELS/"best_cnn_model.keras",monitor="val_loss",save_best_only=True)]
-    history=model.fit(train,validation_data=val,epochs=30,callbacks=callbacks)
+    history=model.fit(train,validation_data=val,epochs=30,callbacks=callbacks,class_weight=class_weights)
     best=tf.keras.models.load_model(MODELS/"best_cnn_model.keras")
     y=np.concatenate([labels.numpy() for _,labels in test]); probs=best.predict(test,verbose=1); pred=probs.argmax(1)
     cm=confusion_matrix(y,pred,labels=list(range(6)))
