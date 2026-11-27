@@ -14,8 +14,6 @@ BASE_DIR = Path(__file__).resolve().parent
 MODEL_PATH = (
     BASE_DIR
     / "runs"
-    / "classify"
-    / "runs"
     / "yolo_classification"
     / "waste_yolov8n_cls"
     / "weights"
